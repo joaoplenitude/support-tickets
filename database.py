@@ -1,17 +1,16 @@
 import sqlite3
-from datetime import datetime
-import pandas as pd
 
-DB_FILE = "tickets.db"
+# Conecta ao banco de dados (cria se não existir)
+def conectar():
+    return sqlite3.connect("ticket.db", check_same_thread=False)
 
-# Cria o banco de dados e a tabela, se não existir
-def criar_banco():
-    conn = sqlite3.connect(DB_FILE)
+# Cria a tabela de tickets
+def criar_tabela():
+    conn = conectar()
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tickets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticket_id TEXT UNIQUE,
+            id TEXT PRIMARY KEY,
             nome TEXT,
             setor TEXT,
             problema TEXT,
@@ -23,42 +22,42 @@ def criar_banco():
     conn.commit()
     conn.close()
 
-# Insere um novo ticket no banco de dados
-def inserir_ticket(ticket_id, nome, setor, problema, status, prioridade, data_envio):
-    conn = sqlite3.connect(DB_FILE)
+# Insere um novo ticket
+def inserir_ticket(ticket):
+    conn = conectar()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO tickets (ticket_id, nome, setor, problema, status, prioridade, data_envio)
+        INSERT INTO tickets (id, nome, setor, problema, status, prioridade, data_envio)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (ticket_id, nome, setor, problema, status, prioridade, data_envio))
+    """, (
+        ticket["ID"],
+        ticket["Nome"],
+        ticket["Setor"],
+        ticket["Problema"],
+        ticket["Status"],
+        ticket["Prioridade"],
+        ticket["Data de envio"]
+    ))
     conn.commit()
     conn.close()
 
-# Retorna todos os tickets como um DataFrame
-def carregar_tickets():
-    conn = sqlite3.connect(DB_FILE)
-    df = pd.read_sql_query("SELECT * FROM tickets ORDER BY id DESC", conn)
-    conn.close()
-    return df
-
-# Atualiza os tickets (espera receber um DataFrame editado)
-def atualizar_todos_tickets(df_editado):
-    conn = sqlite3.connect(DB_FILE)
+# Busca todos os tickets
+def buscar_todos_os_tickets():
+    conn = conectar()
     cursor = conn.cursor()
-    for _, row in df_editado.iterrows():
-        cursor.execute("""
-            UPDATE tickets
-            SET status = ?, prioridade = ?
-            WHERE ticket_id = ?
-        """, (row["Status"], row["Prioridade"], row["ID"]))
-    conn.commit()
+    cursor.execute("SELECT * FROM tickets")
+    rows = cursor.fetchall()
     conn.close()
 
-# Pega o último número de ticket para continuar incrementando
-def ultimo_numero_ticket():
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT MAX(id) FROM tickets")
-    result = cursor.fetchone()
-    conn.close()
-    return result[0] if result[0] else 0
+    tickets = []
+    for row in rows:
+        tickets.append({
+            "ID": row[0],
+            "Nome": row[1],
+            "Setor": row[2],
+            "Problema": row[3],
+            "Status": row[4],
+            "Prioridade": row[5],
+            "Data de envio": row[6],
+        })
+    return tickets
