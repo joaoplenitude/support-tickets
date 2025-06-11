@@ -1,10 +1,21 @@
-# app.py
 import datetime
-import pandas as pd
-import streamlit as st
-from database import criar_banco, inserir_ticket, carregar_tickets, atualizar_tickets
-from email.message import EmailMessage
 import smtplib
+from email.message import EmailMessage
+
+import altair as alt
+import streamlit as st
+import pandas as pd
+
+from database import (
+    criar_banco,
+    inserir_ticket,
+    carregar_tickets,
+    atualizar_todos_tickets,
+    ultimo_numero_ticket,
+)
+
+# Inicializa o banco de dados
+criar_banco()
 
 
 # Função para envio de e-mail
@@ -15,7 +26,9 @@ def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_
     msg = EmailMessage()
     msg["Subject"] = f"Novo Ticket Aberto: {ticket_id}"
     msg["From"] = EMAIL_REMETENTE
-    msg["To"] = destinatario
+    msg["To"] = (
+        ", ".join(destinatario) if isinstance(destinatario, list) else destinatario
+    )
 
     corpo = f"""
     Novo ticket foi aberto no sistema de suporte:
@@ -39,24 +52,21 @@ def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_
         st.error(f"Erro ao enviar e-mail: {e}")
 
 
-# Config inicial
-criar_banco()
+# Streamlit config
 st.set_page_config(page_title="Suporte Plenitude", page_icon="🌻")
-st.title("🎫 Suporte Plenitude")
+st.title("🌻 Suporte Plenitude")
 
 st.write(
     """
-Aplicativo interno da Plenitude Distribuidora para solicitação de 
-Tickets de suporte de TI, com maior controle e disponibilidade.
+Aplicativo interno da Plenitude Distribuidora para solicitação de
+Tickets de suporte de TI, assim podemos ter maior controle e
+disponibilidade com as solicitações!
 """
 )
 
-# Carregar tickets do banco
-if "df" not in st.session_state:
-    st.session_state.df = carregar_tickets()
+# Formulário para novo ticket
+st.header("Adicionar um 🌻|Ticket")
 
-# Formulário de novo ticket
-st.header("Adicionar um 🎫|Ticket")
 with st.form("add_ticket_form"):
     Nome = st.text_area("Nome")
     Setor = st.selectbox(
@@ -76,42 +86,13 @@ with st.form("add_ticket_form"):
     submitted = st.form_submit_button("Enviar")
 
 if submitted:
-    hoje = datetime.datetime.now().strftime("%Y-%m-%d")
-    inserir_ticket(Nome, Setor, Problema, "Aberto", Prioridade, hoje)
-    st.session_state.df = carregar_tickets()
-    novo_id = st.session_state.df.iloc[0]["id"]
+    ticket_num = ultimo_numero_ticket() + 1
+    ticket_id = f"TICKET-{ticket_num}"
+    hoje = datetime.datetime.now().date()
+
+    inserir_ticket(ticket_id, Nome, Setor, Problema, "Aberto", Prioridade, str(hoje))
 
     st.success("✅ Ticket Enviado com Sucesso!")
-    st.dataframe(st.session_state.df.head(1), use_container_width=True, hide_index=True)
-
-    # Envio de e-mail
-    def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_id):
-        EMAIL_REMETENTE = st.secrets["email"]["remetente"]
-        SENHA_EMAIL = st.secrets["email"]["senha"]
-
-        msg = EmailMessage()
-        msg["Subject"] = f"Novo Ticket Aberto: TICKET-{ticket_id}"
-        msg["From"] = EMAIL_REMETENTE
-        msg["To"] = ", ".join(destinatario)
-        msg.set_content(
-            f"""
-        Novo ticket aberto:
-
-        🆔 ID: TICKET-{ticket_id}
-        👤 Nome: {nome}
-        🏢 Setor: {setor}
-        📋 Problema: {problema}
-        🚨 Prioridade: {prioridade}
-        """
-        )
-
-        try:
-            with smtplib.SMTP_SSL("email-ssl.com.br", 465) as smtp:
-                smtp.login(EMAIL_REMETENTE, SENHA_EMAIL)
-                smtp.send_message(msg)
-            st.success("📧 Notificação por e-mail enviada com sucesso!")
-        except Exception as e:
-            st.error(f"Erro ao enviar e-mail: {e}")
 
     enviar_email_ticket(
         destinatario=[
@@ -122,57 +103,53 @@ if submitted:
         setor=Setor,
         problema=Problema,
         prioridade=Prioridade,
-        ticket_id=novo_id,
+        ticket_id=ticket_id,
     )
 
-# Tabela e edição
+# Carregar e exibir tickets existentes
 st.header("Tickets Existentes")
-st.write(f"Número de tickets: `{len(st.session_state.df)}`")
-st.info("Você pode editar os tickets clicando duas vezes nas células.", icon="✍️")
+df_tickets = carregar_tickets()
+df_tickets.rename(
+    columns={
+        "ticket_id": "ID",
+        "nome": "Nome",
+        "setor": "Setor",
+        "problema": "Problema",
+        "status": "Status",
+        "prioridade": "Prioridade",
+        "data_envio": "Data de envio",
+    },
+    inplace=True,
+)
+
+st.write(f"Número de tickets: `{len(df_tickets)}`")
 
 edited_df = st.data_editor(
-    st.session_state.df,
+    df_tickets,
     use_container_width=True,
     hide_index=True,
     column_config={
-        "status": st.column_config.SelectboxColumn(
-            "Status", options=["Aberto", "Em Progresso", "Fechado"], required=True
+        "Status": st.column_config.SelectboxColumn(
+            "Status",
+            help="Status do ticket",
+            options=["Aberto", "Em Progresso", "Fechado"],
+            required=True,
         ),
-        "prioridade": st.column_config.SelectboxColumn(
-            "Prioridade", options=["Alta", "Média", "Baixa"], required=True
+        "Prioridade": st.column_config.SelectboxColumn(
+            "Prioridade",
+            help="Prioridade",
+            options=["Alta", "Média", "Baixa"],
+            required=True,
         ),
     },
-    disabled=["id", "data_envio", "nome"],
+    disabled=["ID", "Data de envio", "Nome", "Setor", "Problema"],
 )
 
-if not edited_df.equals(st.session_state.df):
-    atualizar_tickets(edited_df)
-    st.session_state.df = carregar_tickets()
-    st.success("✅ Tickets atualizados com sucesso!")
+# Atualiza banco se houve edições
+if not df_tickets.equals(edited_df):
+    atualizar_todos_tickets(edited_df)
+    st.success("🔄 Banco de dados atualizado com sucesso!")
 
-    # Envia o e-mail
-    enviar_email_ticket(
-        destinatario=[
-            "joao.victor@plenitudedistribuidora.com.br",
-            "bruno@plenitudedistribuidora.com.br",
-        ],
-        nome=Nome,
-        setor=Setor,
-        problema=Problema,
-        prioridade=Prioridade,
-        ticket_id=f"TICKET-{recent_ticket_number + 1}",
-    )
-
-
-# Show section to view and edit existing tickets in a table.
-st.header("Tickets Existentes")
-st.write(f"Number of tickets: `{len(st.session_state.df)}`")
-
-st.info(
-    "You can edit the tickets by double clicking on a cell. Note how the plots below "
-    "update automatically! You can also sort the table by clicking on the column headers.",
-    icon="✍️",
-)
 
 # Show the tickets dataframe with `st.data_editor`. This lets the user edit the table
 # cells. The edited data is returned as a new dataframe.
