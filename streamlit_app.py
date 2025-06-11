@@ -7,13 +7,13 @@ import pandas as pd
 import streamlit as st
 
 # Show app title and description.
-st.set_page_config(page_title="Support tickets", page_icon="🎫")
-st.title("🎫 Support tickets")
+st.set_page_config(page_title="Suporte Plenitude", page_icon="🎫")
+st.title("🎫 Suporte Plenitude")
 st.write(
     """
-    This app shows how you can build an internal tool in Streamlit. Here, we are 
-    implementing a support ticket workflow. The user can create a ticket, edit 
-    existing tickets, and view some statistics.
+    Aplicativo interno da Plenitude Distribuidora para solicitação de 
+    Tickets de suporte de TI, assim podemos ter o maior controle e 
+    disponibilidade com as solicitações de suporte!
     """
 )
 
@@ -25,26 +25,7 @@ if "df" not in st.session_state:
 
     # Make up some fake issue descriptions.
     issue_descriptions = [
-        "Network connectivity issues in the office",
-        "Software application crashing on startup",
-        "Printer not responding to print commands",
-        "Email server downtime",
-        "Data backup failure",
-        "Login authentication problems",
-        "Website performance degradation",
-        "Security vulnerability identified",
-        "Hardware malfunction in the server room",
-        "Employee unable to access shared files",
-        "Database connection failure",
-        "Mobile application not syncing data",
-        "VoIP phone system issues",
-        "VPN connection problems for remote employees",
-        "System updates causing compatibility issues",
-        "File server running out of storage space",
-        "Intrusion detection system alerts",
-        "Inventory management system errors",
-        "Customer data not loading in CRM",
-        "Collaboration tool not sending notifications",
+        "Descrevendo Problemas",
     ]
 
     # Generate the dataframe with 100 rows/tickets.
@@ -66,14 +47,16 @@ if "df" not in st.session_state:
 
 
 # Show a section to add a new ticket.
-st.header("Add a ticket")
+st.header("Adicionar um 🎫|Ticket")
 
 # We're adding tickets via an `st.form` and some input widgets. If widgets are used
 # in a form, the app will only rerun once the submit button is pressed.
 with st.form("add_ticket_form"):
-    issue = st.text_area("Describe the issue")
-    priority = st.selectbox("Priority", ["High", "Medium", "Low"])
-    submitted = st.form_submit_button("Submit")
+    Nome = st.text_area("Nome")
+    Setor = st.selectbox("Setor", ["Produção", "Comercial", "Marketplace", "RH", "Administrativo", "Marketing", "SAC"])
+    Problema = st.text_area("Descreva o seu problema")
+    Prioridade = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"])
+    submitted = st.form_submit_button("Enviar")
 
 if submitted:
     # Make a dataframe for the new ticket and append it to the dataframe in session
@@ -84,21 +67,21 @@ if submitted:
         [
             {
                 "ID": f"TICKET-{recent_ticket_number+1}",
-                "Issue": issue,
-                "Status": "Open",
-                "Priority": priority,
+                "Issue": Problema,
+                "Status": "Aberto",
+                "Priority": Prioridade,
                 "Date Submitted": today,
             }
         ]
     )
 
     # Show a little success message.
-    st.write("Ticket submitted! Here are the ticket details:")
+    st.write("Ticket Enviado! Aqui estão os detalhes do seu Ticket:")
     st.dataframe(df_new, use_container_width=True, hide_index=True)
     st.session_state.df = pd.concat([df_new, st.session_state.df], axis=0)
 
 # Show section to view and edit existing tickets in a table.
-st.header("Existing tickets")
+st.header("Tickets Existentes")
 st.write(f"Number of tickets: `{len(st.session_state.df)}`")
 
 st.info(
