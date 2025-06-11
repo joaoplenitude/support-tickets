@@ -33,7 +33,7 @@ def inserir_ticket(ticket_id, nome, setor, problema, status, prioridade, data_en
     cursor = conn.cursor()
     cursor.execute(
         """
-        INSERT INTO tickets (id, nome, setor, problema, status, prioridade, data_envio)
+        INSERT INTO tickets (Nome, Setor, Problema, Status, Prioridade, Data_envio)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     """,
         (ticket_id, nome, setor, problema, status, prioridade, data_envio),
