@@ -1,12 +1,10 @@
+# app.py
 import datetime
-import random
-import smtplib
-from email.message import EmailMessage
-
-import altair as alt
-import numpy as np
 import pandas as pd
 import streamlit as st
+from database import criar_banco, inserir_ticket, carregar_tickets, atualizar_tickets
+from email.message import EmailMessage
+import smtplib
 
 
 # Função para envio de e-mail
@@ -41,39 +39,24 @@ def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_
         st.error(f"Erro ao enviar e-mail: {e}")
 
 
-# Streamlit config
-st.set_page_config(page_title="Suporte Plenitude", page_icon="🎫")
+# Config inicial
+criar_banco()
+st.set_page_config(page_title="Suporte Plenitude", page_icon="🌻")
 st.title("🎫 Suporte Plenitude")
 
 st.write(
     """
 Aplicativo interno da Plenitude Distribuidora para solicitação de 
-Tickets de suporte de TI, assim podemos ter maior controle e 
-disponibilidade com as solicitações!
+Tickets de suporte de TI, com maior controle e disponibilidade.
 """
 )
 
-# Inicializa DataFrame se ainda não existe
+# Carregar tickets do banco
 if "df" not in st.session_state:
-    np.random.seed(10)
-    issue_descriptions = ["Problema de exemplo"]
-    data = {
-        "ID": [f"TICKET-{i}" for i in range(1, 3)],
-        "Nome": np.random.choice(["Marcelo", "Ricardo", "Renan"], size=2),
-        "Setor": np.random.choice(["Comercial", "RH", "Produção"], size=2),
-        "Problema": np.random.choice(issue_descriptions, size=2),
-        "Status": np.random.choice(["Aberto", "Em Progresso", "Fechado"], size=2),
-        "Prioridade": np.random.choice(["Alta", "Média", "Baixa"], size=2),
-        "Data de envio": [
-            datetime.date(2023, 6, 1) + datetime.timedelta(days=random.randint(0, 182))
-            for _ in range(2)
-        ],
-    }
-    st.session_state.df = pd.DataFrame(data)
+    st.session_state.df = carregar_tickets()
 
-# Formulário para novo ticket
+# Formulário de novo ticket
 st.header("Adicionar um 🎫|Ticket")
-
 with st.form("add_ticket_form"):
     Nome = st.text_area("Nome")
     Setor = st.selectbox(
@@ -93,30 +76,86 @@ with st.form("add_ticket_form"):
     submitted = st.form_submit_button("Enviar")
 
 if submitted:
-    recent_ticket_number = int(max(st.session_state.df.ID).split("-")[1])
-    hoje = datetime.datetime.now().date()
+    hoje = datetime.datetime.now().strftime("%Y-%m-%d")
+    inserir_ticket(Nome, Setor, Problema, "Aberto", Prioridade, hoje)
+    st.session_state.df = carregar_tickets()
+    novo_id = st.session_state.df.iloc[0]["id"]
 
-    novo_ticket = pd.DataFrame(
-        [
-            {
-                "ID": f"TICKET-{recent_ticket_number + 1}",
-                "Nome": Nome,
-                "Setor": Setor,
-                "Problema": Problema,
-                "Status": "Aberto",
-                "Prioridade": Prioridade,
-                "Data de envio": hoje,
-            }
-        ]
+    st.success("✅ Ticket Enviado com Sucesso!")
+    st.dataframe(st.session_state.df.head(1), use_container_width=True, hide_index=True)
+
+    # Envio de e-mail
+    def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_id):
+        EMAIL_REMETENTE = st.secrets["email"]["remetente"]
+        SENHA_EMAIL = st.secrets["email"]["senha"]
+
+        msg = EmailMessage()
+        msg["Subject"] = f"Novo Ticket Aberto: TICKET-{ticket_id}"
+        msg["From"] = EMAIL_REMETENTE
+        msg["To"] = ", ".join(destinatario)
+        msg.set_content(
+            f"""
+        Novo ticket aberto:
+
+        🆔 ID: TICKET-{ticket_id}
+        👤 Nome: {nome}
+        🏢 Setor: {setor}
+        📋 Problema: {problema}
+        🚨 Prioridade: {prioridade}
+        """
+        )
+
+        try:
+            with smtplib.SMTP_SSL("email-ssl.com.br", 465) as smtp:
+                smtp.login(EMAIL_REMETENTE, SENHA_EMAIL)
+                smtp.send_message(msg)
+            st.success("📧 Notificação por e-mail enviada com sucesso!")
+        except Exception as e:
+            st.error(f"Erro ao enviar e-mail: {e}")
+
+    enviar_email_ticket(
+        destinatario=[
+            "joao.victor@plenitudedistribuidora.com.br",
+            "bruno@plenitudedistribuidora.com.br",
+        ],
+        nome=Nome,
+        setor=Setor,
+        problema=Problema,
+        prioridade=Prioridade,
+        ticket_id=novo_id,
     )
 
-    st.session_state.df = pd.concat([novo_ticket, st.session_state.df], axis=0)
-    st.write("✅ Ticket Enviado com Sucesso!")
-    st.dataframe(novo_ticket, use_container_width=True, hide_index=True)
+# Tabela e edição
+st.header("Tickets Existentes")
+st.write(f"Número de tickets: `{len(st.session_state.df)}`")
+st.info("Você pode editar os tickets clicando duas vezes nas células.", icon="✍️")
+
+edited_df = st.data_editor(
+    st.session_state.df,
+    use_container_width=True,
+    hide_index=True,
+    column_config={
+        "status": st.column_config.SelectboxColumn(
+            "Status", options=["Aberto", "Em Progresso", "Fechado"], required=True
+        ),
+        "prioridade": st.column_config.SelectboxColumn(
+            "Prioridade", options=["Alta", "Média", "Baixa"], required=True
+        ),
+    },
+    disabled=["id", "data_envio", "nome"],
+)
+
+if not edited_df.equals(st.session_state.df):
+    atualizar_tickets(edited_df)
+    st.session_state.df = carregar_tickets()
+    st.success("✅ Tickets atualizados com sucesso!")
 
     # Envia o e-mail
     enviar_email_ticket(
-        destinatario=["joao.victor@plenitudedistribuidora.com.br", "bruno@plenitudedistribuidora.com.br"],
+        destinatario=[
+            "joao.victor@plenitudedistribuidora.com.br",
+            "bruno@plenitudedistribuidora.com.br",
+        ],
         nome=Nome,
         setor=Setor,
         problema=Problema,
