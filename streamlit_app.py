@@ -32,7 +32,7 @@ if "df" not in st.session_state:
     data = {
         "ID": [f"TICKET-{i}" for i in range(2, 1, -1)],
         "Nome": np.random.choice(["Marcelo", "Ricardo", "Renan"]),
-        "Setor": np.radom.choice(["Comercial", "RH," "Produção"]),
+        "Setor": np.random.choice(["Comercial", "RH," "Produção"]),
         "Issue": np.random.choice(issue_descriptions, size=100),
         "Status": np.random.choice(["Aberto", "Em Progresso", "Fechado"], size=100),
         "Priority": np.random.choice(["Alto", "Médio", "Baixo"], size=100),
