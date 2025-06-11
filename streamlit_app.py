@@ -22,7 +22,7 @@ def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_
     Novo ticket foi aberto no sistema de suporte:
 
     🆔 ID: {ticket_id}
-    👤 Nome: {nome}
+    🪪 Nome: {nome}
     🏢 Setor: {setor}
     📋 Problema: {problema}
     🚨 Prioridade: {prioridade}
@@ -42,7 +42,7 @@ def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_
 # Inicializa banco e dados
 criar_tabela()
 if "df" not in st.session_state:
-    st.session_state.df = buscar_todos_os_tickets()
+    st.session_state.df = pd.DataFrame(buscar_todos_os_tickets())
 
 # Streamlit config
 st.set_page_config(page_title="Suporte Plenitude", page_icon="🎫")
