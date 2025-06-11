@@ -11,8 +11,8 @@ import streamlit as st
 
 # Função para envio de e-mail
 def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_id):
-    EMAIL_REMETENTE = "SEU_EMAIL@gmail.com"
-    SENHA_EMAIL = "SENHA_DO_EMAIL"
+    EMAIL_REMETENTE = st.secrets["email"]["remetente"]
+    SENHA_EMAIL = st.secrets["email"]["senha"]
 
     msg = EmailMessage()
     msg["Subject"] = f"Novo Ticket Aberto: {ticket_id}"
@@ -116,7 +116,7 @@ if submitted:
 
     # Envia o e-mail
     enviar_email_ticket(
-        destinatario="EMAIL_DESTINO@empresa.com",
+        destinatario="joao.victor@plenitudedistribuidora.com.br",
         nome=Nome,
         setor=Setor,
         problema=Problema,
