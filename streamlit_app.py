@@ -116,7 +116,7 @@ if submitted:
 
     # Envia o e-mail
     enviar_email_ticket(
-        destinatario=["joao.victor@plenitudedistribuidora.com.br", "bruno@plenitudedistribuidora.com.br"]
+        destinatario=["joao.victor@plenitudedistribuidora.com.br", "bruno@plenitudedistribuidora.com.br"],
         nome=Nome,
         setor=Setor,
         problema=Problema,
