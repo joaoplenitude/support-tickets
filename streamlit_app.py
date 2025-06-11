@@ -21,19 +21,21 @@ st.write(
 if "df" not in st.session_state:
 
     # Set seed for reproducibility.
-    np.random.seed(42)
+    np.random.seed(10)
 
     # Make up some fake issue descriptions.
     issue_descriptions = [
-        "Descrevendo Problemas",
+        "Problema de exemplo",
     ]
 
     # Generate the dataframe with 100 rows/tickets.
     data = {
-        "ID": [f"TICKET-{i}" for i in range(1100, 1000, -1)],
+        "ID": [f"TICKET-{i}" for i in range(2, 1, -1)],
+        "Nome": np.random.choice(["Marcelo", "Ricardo", "Renan"]),
+        "Setor": np.radom.choice(["Comercial", "RH," "Produção"]),
         "Issue": np.random.choice(issue_descriptions, size=100),
-        "Status": np.random.choice(["Open", "In Progress", "Closed"], size=100),
-        "Priority": np.random.choice(["High", "Medium", "Low"], size=100),
+        "Status": np.random.choice(["Aberto", "Em Progresso", "Fechado"], size=100),
+        "Priority": np.random.choice(["Alto", "Médio", "Baixo"], size=100),
         "Date Submitted": [
             datetime.date(2023, 6, 1) + datetime.timedelta(days=random.randint(0, 182))
             for _ in range(100)
@@ -67,10 +69,12 @@ if submitted:
         [
             {
                 "ID": f"TICKET-{recent_ticket_number+1}",
-                "Issue": Problema,
+                "Nome": Nome,
+                "Setor": Setor,
+                "Problema": Problema,
                 "Status": "Aberto",
-                "Priority": Prioridade,
-                "Date Submitted": today,
+                "Prioridade": Prioridade,
+                "Date de envio": today,
             }
         ]
     )
@@ -100,18 +104,18 @@ edited_df = st.data_editor(
         "Status": st.column_config.SelectboxColumn(
             "Status",
             help="Ticket status",
-            options=["Open", "In Progress", "Closed"],
+            options=["Aberto", "Em Progresso", "Fechado"],
             required=True,
         ),
         "Priority": st.column_config.SelectboxColumn(
             "Priority",
             help="Priority",
-            options=["High", "Medium", "Low"],
+            options=["Alto", "Médio", "Baixo"],
             required=True,
         ),
     },
     # Disable editing the ID and Date Submitted columns.
-    disabled=["ID", "Date Submitted"],
+    disabled=["ID", "Date Submitted", "Nome"],
 )
 
 # Show some metrics and charts about the ticket.
