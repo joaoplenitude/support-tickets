@@ -77,7 +77,7 @@ with st.form("add_ticket_form"):
 
 if submitted:
     hoje = datetime.datetime.now().date()
-    ticket_id = f"TICKET-{hoje.strftime('%Y%m%d%H%M%S')}"
+    ticket_id = f"TICKET-{hoje.strftime('%Y%m%d%H%')}"
 
     inserir_ticket(ticket_id, Nome, Setor, Problema, "Aberto", Prioridade, hoje)
     st.success("✅ Ticket Enviado com Sucesso!")
