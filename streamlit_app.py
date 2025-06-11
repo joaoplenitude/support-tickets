@@ -33,7 +33,7 @@ def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_
     msg.set_content(corpo)
 
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+        with smtplib.SMTP_SSL("email-ssl.com.br", 465) as smtp:
             smtp.login(EMAIL_REMETENTE, SENHA_EMAIL)
             smtp.send_message(msg)
         st.success("📧 Notificação por e-mail enviada com sucesso!")
@@ -116,7 +116,7 @@ if submitted:
 
     # Envia o e-mail
     enviar_email_ticket(
-        destinatario="joao.victor@plenitudedistribuidora.com.br",
+        destinatario=["joao.victor@plenitudedistribuidora.com.br", "bruno@plenitudedistribuidora.com.br"]
         nome=Nome,
         setor=Setor,
         problema=Problema,
