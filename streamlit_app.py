@@ -38,7 +38,7 @@ if "df" not in st.session_state:
         "Priority": np.random.choice(["Alto", "Médio", "Baixo"], size=2),
         "Date Submitted": [
             datetime.date(2023, 6, 1) + datetime.timedelta(days=random.randint(0, 182))
-            for _ in range(100)
+            for _ in range(2)
         ],
     }
     df = pd.DataFrame(data)
