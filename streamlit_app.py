@@ -24,7 +24,7 @@ if "df" not in st.session_state:
     np.random.seed(10)
 
     # Make up some fake issue descriptions.
-    issue_descriptions = [
+    decrições_de_problemas = [
         "Problema de exemplo",
     ]
 
@@ -33,10 +33,10 @@ if "df" not in st.session_state:
         "ID": [f"TICKET-{i}" for i in range(1, 3)],
         "Nome": np.random.choice(["Marcelo", "Ricardo", "Renan"], size=2),
         "Setor": np.random.choice(["Comercial", "RH", "Produção"], size=2),
-        "Issue": np.random.choice(issue_descriptions, size=2),
+        "Problema": np.random.choice(decrições_de_problemas, size=2),
         "Status": np.random.choice(["Aberto", "Em Progresso", "Fechado"], size=2),
-        "Priority": np.random.choice(["Alto", "Médio", "Baixo"], size=2),
-        "Date Submitted": [
+        "Prioridade": np.random.choice(["Alto", "Médio", "Baixo"], size=2),
+        "Date de envio": [
             datetime.date(2023, 6, 1) + datetime.timedelta(days=random.randint(0, 182))
             for _ in range(2)
         ],
@@ -58,9 +58,9 @@ with st.form("add_ticket_form"):
     Setor = st.selectbox("Setor", ["Produção", "Comercial", "Marketplace", "RH", "Administrativo", "Marketing", "SAC"])
     Problema = st.text_area("Descreva o seu problema")
     Prioridade = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"])
-    submitted = st.form_submit_button("Enviar")
+    Enviado = st.form_submit_button("Enviar")
 
-if submitted:
+if Enviado:
     # Make a dataframe for the new ticket and append it to the dataframe in session
     # state.
     recent_ticket_number = int(max(st.session_state.df.ID).split("-")[1])
@@ -107,15 +107,15 @@ edited_df = st.data_editor(
             options=["Aberto", "Em Progresso", "Fechado"],
             required=True,
         ),
-        "Priority": st.column_config.SelectboxColumn(
-            "Priority",
-            help="Priority",
+        "Prioridade": st.column_config.SelectboxColumn(
+            "Prioridade",
+            help="Prioridade",
             options=["Alto", "Médio", "Baixo"],
             required=True,
         ),
     },
     # Disable editing the ID and Date Submitted columns.
-    disabled=["ID", "Date Submitted", "Nome"],
+    disabled=["ID", "Data de envio", "Nome"],
 )
 
 # Show some metrics and charts about the ticket.
