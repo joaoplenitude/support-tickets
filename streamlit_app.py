@@ -30,7 +30,7 @@ if "df" not in st.session_state:
 
     # Generate the dataframe with 100 rows/tickets.
     data = {
-        "ID": [f"TICKET-{i}" for i in range(1, 3)],
+        "ID": [f"TICKET-{i}" for i in range(1, 4)],
         "Nome": np.random.choice(["Marcelo", "Ricardo", "Renan"], size=3),
         "Setor": np.random.choice(["Comercial", "RH", "Produção"], size=3),
         "Issue": np.random.choice(issue_descriptions, size=3,
