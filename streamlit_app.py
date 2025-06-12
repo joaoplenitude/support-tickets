@@ -129,7 +129,7 @@ edited_df = st.data_editor(
             options=["Alta", "Média", "Baixa"], required=True,
         ),
     },
-    disabled=["ID", "Data de envio", "Nome"]
+    disabled=["ID", "Setor", "Data de envio", "Nome"]
 )
 
 # Gráficos
