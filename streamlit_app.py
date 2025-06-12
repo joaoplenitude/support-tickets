@@ -1,4 +1,6 @@
+# streamlit_app.py
 import datetime
+import random
 import smtplib
 from email.message import EmailMessage
 
@@ -23,8 +25,8 @@ def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_
 
     🆔 ID: {ticket_id}
     🪪 Nome: {nome}
-    🏢 Setor: {setor}
-    📋 Problema: {problema}
+    🏬 Setor: {setor}
+    📝 Problema: {problema}
     🚨 Prioridade: {prioridade}
 
     Verifique o sistema para mais detalhes.
@@ -41,12 +43,15 @@ def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_
 
 # Inicializa banco e dados
 criar_tabela()
-if "df" not in st.session_state:
-    st.session_state.df = pd.DataFrame(buscar_todos_os_tickets())
+
+dados = buscar_todos_os_tickets()
+st.session_state.df = pd.DataFrame(dados, columns=[
+    "ID", "Nome", "Setor", "Problema", "Status", "Prioridade", "Data de envio"
+]) if "df" not in st.session_state else st.session_state.df
 
 # Streamlit config
-st.set_page_config(page_title="Suporte Plenitude", page_icon="🎫")
-st.title("🎫 Suporte Plenitude")
+st.set_page_config(page_title="Suporte de TI Plenitude", page_icon="🎫")
+st.title("👨‍💻| Suporte de TI Plenitude")
 
 st.write("""
 Aplicativo interno da Plenitude Distribuidora para solicitação de 
@@ -62,13 +67,8 @@ with st.form("add_ticket_form"):
     Setor = st.selectbox(
         "Setor",
         [
-            "Produção",
-            "Comercial",
-            "Marketplace",
-            "RH",
-            "Administrativo",
-            "Marketing",
-            "SAC",
+            "Produção", "Comercial", "Marketplace", "RH",
+            "Administrativo", "Marketing", "SAC",
         ],
     )
     Problema = st.text_area("Descreva o seu problema")
@@ -76,36 +76,39 @@ with st.form("add_ticket_form"):
     submitted = st.form_submit_button("Enviar")
 
 if submitted:
-    hoje = datetime.datetime.now().date()
-    ticket_id = f"TICKET-{hoje.strftime('%Y%m%d%H%')}"
+    if not Nome.strip() or not Problema.strip():
+        st.warning("Por favor, preencha todos os campos obrigatórios.")
+    else:
+        hoje = datetime.datetime.now()
+        ticket_id = f"TICKET-{hoje.strftime('%Y%m%d%H%M%S')}-{random.randint(100,999)}"
 
-    inserir_ticket(ticket_id, Nome, Setor, Problema, "Aberto", Prioridade, hoje)
-    st.success("✅ Ticket Enviado com Sucesso!")
+        inserir_ticket(ticket_id, Nome, Setor, Problema, "Aberto", Prioridade, hoje.date())
+        st.success("✅ Ticket Enviado com Sucesso!")
 
-    # Atualiza os dados do banco na sessão
-    st.session_state.df = buscar_todos_os_tickets()
+        dados_atualizados = buscar_todos_os_tickets()
+        st.session_state.df = pd.DataFrame(dados_atualizados, columns=[
+            "ID", "Nome", "Setor", "Problema", "Status", "Prioridade", "Data de envio"
+        ])
 
-    # Exibe o ticket
-    novo_ticket = pd.DataFrame([{
-        "ID": ticket_id,
-        "Nome": Nome,
-        "Setor": Setor,
-        "Problema": Problema,
-        "Status": "Aberto",
-        "Prioridade": Prioridade,
-        "Data de envio": hoje
-    }])
-    st.dataframe(novo_ticket, use_container_width=True, hide_index=True)
+        novo_ticket = pd.DataFrame([{
+            "ID": ticket_id,
+            "Nome": Nome,
+            "Setor": Setor,
+            "Problema": Problema,
+            "Status": "Aberto",
+            "Prioridade": Prioridade,
+            "Data de envio": hoje.date()
+        }])
+        st.dataframe(novo_ticket, use_container_width=True, hide_index=True)
 
-    # Envia e-mail
-    enviar_email_ticket(
-        destinatario=["joao.victor@plenitudedistribuidora.com.br", "bruno@plenitudedistribuidora.com.br"],
-        nome=Nome,
-        setor=Setor,
-        problema=Problema,
-        prioridade=Prioridade,
-        ticket_id=ticket_id,
-    )
+        enviar_email_ticket(
+            destinatario=["joao.victor@plenitudedistribuidora.com.br", "bruno@plenitudedistribuidora.com.br"],
+            nome=Nome,
+            setor=Setor,
+            problema=Problema,
+            prioridade=Prioridade,
+            ticket_id=ticket_id,
+        )
 
 # Exibição dos tickets existentes
 st.header("Tickets Existentes")
@@ -117,19 +120,15 @@ edited_df = st.data_editor(
     hide_index=True,
     column_config={
         "Status": st.column_config.SelectboxColumn(
-            "Status",
-            help="Ticket status",
-            options=["Aberto", "Em Progresso", "Fechado"],
-            required=True,
+            "Status", help="Ticket status",
+            options=["Aberto", "Em Progresso", "Fechado"], required=True,
         ),
         "Prioridade": st.column_config.SelectboxColumn(
-            "Prioridade",
-            help="Prioridade",
-            options=["Alta", "Média", "Baixa"],
-            required=True,
+            "Prioridade", help="Prioridade",
+            options=["Alta", "Média", "Baixa"], required=True,
         ),
     },
-    disabled=["ID", "Data de envio", "Nome"],
+    disabled=["ID", "Data de envio", "Nome"]
 )
 
 # Gráficos
@@ -151,6 +150,8 @@ status_plot = (
         xOffset="Status:N",
         color="Status:N",
     )
+    .configure_axis(labelFontSize=12, titleFontSize=14)
+    .configure_legend(orient="bottom", titleFontSize=13, labelFontSize=12)
 )
 st.altair_chart(status_plot, use_container_width=True)
 
