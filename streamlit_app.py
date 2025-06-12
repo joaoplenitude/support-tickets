@@ -54,9 +54,10 @@ st.set_page_config(page_title="Suporte de TI Plenitude", page_icon="🎫")
 st.title("👨‍💻| Suporte de TI Plenitude")
 
 st.write("""
-Aplicativo interno da Plenitude Distribuidora para solicitação de 
-Tickets de suporte de TI, assim podemos ter maior controle e 
-disponibilidade com as solicitações!
+Este é o nosso canal oficial para abertura de tickets de suporte de TI. Por aqui, você pode registrar suas 
+solicitações de forma prática e organizada, garantindo mais agilidade no atendimento, 
+maior controle das demandas e melhor acompanhamento das soluções.
+Conte conosco — estamos aqui para te ajudar!
 """)
 
 # Formulário para novo ticket
