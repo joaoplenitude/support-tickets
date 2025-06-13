@@ -3,6 +3,8 @@ import datetime
 import random
 import smtplib
 from email.message import EmailMessage
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
 import altair as alt
 import pandas as pd
@@ -41,13 +43,10 @@ def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_
     except Exception as e:
         st.error(f"Erro ao enviar e-mail: {e}")
 
-#API Slack
-from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
-
 # Token do Slack via secrets para segurança
 SLACK_TOKEN = st.secrets["slack"]["token"]
 
+#API slack
 def enviar_mensagem_slack(ticket_id, nome, setor, problema, prioridade):
     client = WebClient(token=SLACK_TOKEN)
 
@@ -61,13 +60,15 @@ def enviar_mensagem_slack(ticket_id, nome, setor, problema, prioridade):
     )
 
     try:
-        client.chat_postMessage(
-            channel="#desenvolvimento_e_ti",  # Substitua pelo nome exato do canal Slack
+        response = client.chat_postMessage(
+            channel="#desenvolvimento_e_ti",  # Verifique o nome do canal!
             text=mensagem
         )
         st.success("💬 Notificação enviada ao Slack!")
+        st.write("🔄 Resposta do Slack:", response.data)  # Adicionado: mostra a resposta
     except SlackApiError as e:
         st.error(f"Erro ao enviar para Slack: {e.response['error']}")
+        st.write(e.response)
 
 # Inicializa banco e dados
 criar_tabela()
@@ -137,6 +138,14 @@ if submitted:
             problema=Problema,
             prioridade=Prioridade,
             ticket_id=ticket_id,
+        )
+
+        enviar_mensagem_slack(
+            ticket_id=ticket_id,
+            nome=Nome,
+            setor=Setor,
+            problema=Problema,
+            prioridade=Prioridade,
         )
 
 # Exibição dos tickets existentes
