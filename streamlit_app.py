@@ -41,6 +41,34 @@ def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_
     except Exception as e:
         st.error(f"Erro ao enviar e-mail: {e}")
 
+#API Slack
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
+
+# Token do Slack via secrets para segurança
+SLACK_TOKEN = st.secrets["slack"]["token"]
+
+def enviar_mensagem_slack(ticket_id, nome, setor, problema, prioridade):
+    client = WebClient(token=SLACK_TOKEN)
+
+    mensagem = (
+        ":ticket: *Novo ticket aberto!*\n"
+        f"🆔 *ID:* {ticket_id}\n"
+        f"🪪 *Nome:* {nome}\n"
+        f"🏬 *Setor:* {setor}\n"
+        f"📝 *Problema:* {problema}\n"
+        f"🚨 *Prioridade:* {prioridade}"
+    )
+
+    try:
+        client.chat_postMessage(
+            channel="#desenvolvimento_e_ti",  # Substitua pelo nome exato do canal Slack
+            text=mensagem
+        )
+        st.success("💬 Notificação enviada ao Slack!")
+    except SlackApiError as e:
+        st.error(f"Erro ao enviar para Slack: {e.response['error']}")
+
 # Inicializa banco e dados
 criar_tabela()
 
