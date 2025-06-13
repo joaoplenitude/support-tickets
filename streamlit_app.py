@@ -60,15 +60,13 @@ def enviar_mensagem_slack(ticket_id, nome, setor, problema, prioridade):
     )
 
     try:
-        response = client.chat_postMessage(
-            channel="#desenvolvimento_e_ti",  # Verifique o nome do canal!
+        client.chat_postMessage(
+            channel="#desenvolvimento_e_ti",  # Substitua pelo nome exato do canal Slack
             text=mensagem
         )
         st.success("💬 Notificação enviada ao Slack!")
-        st.write("🔄 Resposta do Slack:", response.data)  # Adicionado: mostra a resposta
     except SlackApiError as e:
         st.error(f"Erro ao enviar para Slack: {e.response['error']}")
-        st.write(e.response)
 
 # Inicializa banco e dados
 criar_tabela()
@@ -140,13 +138,13 @@ if submitted:
             ticket_id=ticket_id,
         )
 
-        enviar_mensagem_slack(
+        """ enviar_mensagem_slack(
             ticket_id=ticket_id,
             nome=Nome,
             setor=Setor,
             problema=Problema,
             prioridade=Prioridade,
-        )
+        ) """
 
 # Exibição dos tickets existentes
 st.header("Tickets Existentes")
