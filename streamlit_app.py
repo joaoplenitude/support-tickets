@@ -55,7 +55,7 @@ def enviar_mensagem_slack(ticket_id, nome, setor, problema, prioridade):
 
     try:
         client.chat_postMessage(
-            channel="#desenvolvimento_e_ti",  #Certifique-se que o bot está no canal
+            channel="#suporte",  #Certifique-se que o bot está no canal
             blocks=[
                 {
                     "type": "section",
