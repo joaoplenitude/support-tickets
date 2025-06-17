@@ -1,5 +1,6 @@
 # streamlit_app.py
 import datetime
+import time
 import random
 import smtplib
 from email.message import EmailMessage
@@ -61,7 +62,7 @@ def enviar_mensagem_slack(ticket_id, nome, setor, problema, prioridade):
                     "type": "section",
                     "text": {
                         "type": "mrkdwn",
-                        "text": ":ticket: *🎫 | Novo ticket aberto!*",
+                        "text": ":ticket: *Novo ticket aberto!*",
                     },
                 },
                 {"type": "divider"},
@@ -204,16 +205,17 @@ if submitted:
             ticket_id=ticket_id,
         )
 
-        """ enviar_mensagem_slack(
+        enviar_mensagem_slack(
             ticket_id=ticket_id,
             nome=Nome,
             setor=Setor,
             problema=Problema,
             prioridade=Prioridade,
-        ) """
+        )
 
 # Exibição dos tickets existentes
 st.header("Tickets Existentes")
+st.caption("🔄 A visualização será atualizada automaticamente a cada 30 segundos.")
 st.write(f"Number of tickets: `{len(st.session_state.df)}`")
 
 edited_df = st.data_editor(
@@ -269,3 +271,16 @@ priority_plot = (
     .properties(height=300)
 )
 st.altair_chart(priority_plot, use_container_width=True)
+
+# Armazena o tempo inicial ao carregar a visualização
+if "ultima_atualizacao" not in st.session_state:
+    st.session_state.ultima_atualizacao = time.time()
+
+# Define intervalo de atualização (30 segundos)
+INTERVALO_ATUALIZACAO = 30
+
+# Verifica se já passou o tempo necessário
+if time.time() - st.session_state.ultima_atualizacao > INTERVALO_ATUALIZACAO:
+    st.session_state.ultima_atualizacao = time.time()
+    st.experimental_rerun()
+
