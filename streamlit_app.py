@@ -12,6 +12,7 @@ import streamlit as st
 
 from database import criar_tabela, inserir_ticket, buscar_todos_os_tickets
 
+
 # Função para envio de e-mail
 def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_id):
     EMAIL_REMETENTE = st.secrets["email"]["remetente"]
@@ -43,49 +44,91 @@ def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_
     except Exception as e:
         st.error(f"Erro ao enviar e-mail: {e}")
 
+
 # Token do Slack via secrets para segurança
 SLACK_TOKEN = st.secrets["slack"]["token"]
 
-#API slack
+
+# API slack
 def enviar_mensagem_slack(ticket_id, nome, setor, problema, prioridade):
     client = WebClient(token=SLACK_TOKEN)
 
-    mensagem = (
-        ":ticket: *Novo ticket aberto!*\n"
-        f"🆔 *ID:* {ticket_id}\n"
-        f"🪪 *Nome:* {nome}\n"
-        f"🏬 *Setor:* {setor}\n"
-        f"📝 *Problema:* {problema}\n"
-        f"🚨 *Prioridade:* {prioridade}"
-    )
-
     try:
         client.chat_postMessage(
-            channel="#desenvolvimento_e_ti",  # Substitua pelo nome exato do canal Slack
-            text=mensagem
+            channel="#desenvolvimento_e_ti",  #Certifique-se que o bot está no canal
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": ":ticket: *🎫 | Novo ticket aberto!*",
+                    },
+                },
+                {"type": "divider"},
+                {
+                    "type": "section",
+                    "fields": [
+                        {"type": "mrkdwn", "text": f"*🆔 ID:*\n{ticket_id}"},
+                        {"type": "mrkdwn", "text": f"*🪪 Nome:*\n{nome}"},
+                        {"type": "mrkdwn", "text": f"*🏬 Setor:*\n{setor}"},
+                        {"type": "mrkdwn", "text": f"*🚨 Prioridade:*\n{prioridade}"},
+                    ],
+                },
+                {
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": f"*📝 Problema:*\n{problema}"},
+                },
+                {
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "text": {"type": "plain_text", "text": "🔎 Ver sistema"},
+                            "url": "http://192.168.152.82:3030",  #Substitua pela URL real do sistema
+                            "style": "primary",
+                        }
+                    ],
+                },
+            ],
         )
         st.success("💬 Notificação enviada ao Slack!")
     except SlackApiError as e:
         st.error(f"Erro ao enviar para Slack: {e.response['error']}")
 
+
 # Inicializa banco e dados
 criar_tabela()
 
 dados = buscar_todos_os_tickets()
-st.session_state.df = pd.DataFrame(dados, columns=[
-    "ID", "Nome", "Setor", "Problema", "Status", "Prioridade", "Data de envio"
-]) if "df" not in st.session_state else st.session_state.df
+st.session_state.df = (
+    pd.DataFrame(
+        dados,
+        columns=[
+            "ID",
+            "Nome",
+            "Setor",
+            "Problema",
+            "Status",
+            "Prioridade",
+            "Data de envio",
+        ],
+    )
+    if "df" not in st.session_state
+    else st.session_state.df
+)
 
 # Streamlit config
 st.set_page_config(page_title="Suporte de TI Plenitude", page_icon="🎫")
 st.title("👨‍💻| Suporte de TI Plenitude")
 
-st.write("""
+st.write(
+    """
 Este é o nosso canal oficial para abertura de tickets de suporte de TI. Por aqui, você pode registrar suas 
 solicitações de forma prática e organizada, garantindo mais agilidade no atendimento, 
 maior controle das demandas e melhor acompanhamento das soluções.
 Conte conosco — estamos aqui para te ajudar!
-""")
+"""
+)
 
 # Formulário para novo ticket
 st.header("Adicionar um 🎫|Ticket")
@@ -95,8 +138,13 @@ with st.form("add_ticket_form"):
     Setor = st.selectbox(
         "Setor",
         [
-            "Produção", "Comercial", "Marketplace", "RH",
-            "Administrativo", "Marketing", "SAC",
+            "Produção",
+            "Comercial",
+            "Marketplace",
+            "RH",
+            "Administrativo",
+            "Marketing",
+            "SAC",
         ],
     )
     Problema = st.text_area("Descreva o seu problema")
@@ -110,27 +158,45 @@ if submitted:
         hoje = datetime.datetime.now()
         ticket_id = f"TICKET-{hoje.strftime('%Y%m%d%H%M%S')}-{random.randint(100,999)}"
 
-        inserir_ticket(ticket_id, Nome, Setor, Problema, "Aberto", Prioridade, hoje.date())
+        inserir_ticket(
+            ticket_id, Nome, Setor, Problema, "Aberto", Prioridade, hoje.date()
+        )
         st.success("✅ Ticket Enviado com Sucesso!")
 
         dados_atualizados = buscar_todos_os_tickets()
-        st.session_state.df = pd.DataFrame(dados_atualizados, columns=[
-            "ID", "Nome", "Setor", "Problema", "Status", "Prioridade", "Data de envio"
-        ])
+        st.session_state.df = pd.DataFrame(
+            dados_atualizados,
+            columns=[
+                "ID",
+                "Nome",
+                "Setor",
+                "Problema",
+                "Status",
+                "Prioridade",
+                "Data de envio",
+            ],
+        )
 
-        novo_ticket = pd.DataFrame([{
-            "ID": ticket_id,
-            "Nome": Nome,
-            "Setor": Setor,
-            "Problema": Problema,
-            "Status": "Aberto",
-            "Prioridade": Prioridade,
-            "Data de envio": hoje.date()
-        }])
+        novo_ticket = pd.DataFrame(
+            [
+                {
+                    "ID": ticket_id,
+                    "Nome": Nome,
+                    "Setor": Setor,
+                    "Problema": Problema,
+                    "Status": "Aberto",
+                    "Prioridade": Prioridade,
+                    "Data de envio": hoje.date(),
+                }
+            ]
+        )
         st.dataframe(novo_ticket, use_container_width=True, hide_index=True)
 
         enviar_email_ticket(
-            destinatario=["joao.victor@plenitudedistribuidora.com.br", "bruno@plenitudedistribuidora.com.br"],
+            destinatario=[
+                "joao.victor@plenitudedistribuidora.com.br",
+                "bruno@plenitudedistribuidora.com.br",
+            ],
             nome=Nome,
             setor=Setor,
             problema=Problema,
@@ -156,15 +222,19 @@ edited_df = st.data_editor(
     hide_index=True,
     column_config={
         "Status": st.column_config.SelectboxColumn(
-            "Status", help="Ticket status",
-            options=["Aberto", "Em Progresso", "Fechado"], required=True,
+            "Status",
+            help="Ticket status",
+            options=["Aberto", "Em Progresso", "Fechado"],
+            required=True,
         ),
         "Prioridade": st.column_config.SelectboxColumn(
-            "Prioridade", help="Prioridade",
-            options=["Alta", "Média", "Baixa"], required=True,
+            "Prioridade",
+            help="Prioridade",
+            options=["Alta", "Média", "Baixa"],
+            required=True,
         ),
     },
-    disabled=["ID", "Setor", "Data de envio", "Nome"]
+    disabled=["ID", "Setor", "Data de envio", "Nome"],
 )
 
 # Gráficos
