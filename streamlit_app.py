@@ -56,7 +56,7 @@ def enviar_mensagem_slack(ticket_id, nome, setor, problema, prioridade):
 
     try:
         client.chat_postMessage(
-            channel="#suporte",  #Certifique-se que o bot está no canal
+            channel="#suporte",  # Certifique-se que o bot está no canal
             blocks=[
                 {
                     "type": "section",
@@ -85,7 +85,7 @@ def enviar_mensagem_slack(ticket_id, nome, setor, problema, prioridade):
                         {
                             "type": "button",
                             "text": {"type": "plain_text", "text": "🔎 Ver sistema"},
-                            "url": "http://192.168.152.82:3030",  #Substitua pela URL real do sistema
+                            "url": "http://192.168.152.82:3030",  # Substitua pela URL real do sistema
                             "style": "primary",
                         }
                     ],
@@ -196,7 +196,6 @@ if submitted:
         enviar_email_ticket(
             destinatario=[
                 "joao.victor@plenitudedistribuidora.com.br",
-                "bruno@plenitudedistribuidora.com.br",
             ],
             nome=Nome,
             setor=Setor,
@@ -215,7 +214,7 @@ if submitted:
 
 # Exibição dos tickets existentes
 st.header("Tickets Existentes")
-st.caption("🔄 A visualização será atualizada automaticamente a cada 30 segundos.")
+st.caption("🔄 A visualização será atualizada automaticamente a cada 5 minutos.")
 st.write(f"Number of tickets: `{len(st.session_state.df)}`")
 
 edited_df = st.data_editor(
@@ -272,15 +271,10 @@ priority_plot = (
 )
 st.altair_chart(priority_plot, use_container_width=True)
 
-# Armazena o tempo inicial ao carregar a visualização
-if "ultima_atualizacao" not in st.session_state:
-    st.session_state.ultima_atualizacao = time.time()
 
-# Define intervalo de atualização (30 segundos)
-INTERVALO_ATUALIZACAO = 30
+#função de carregar página
+from streamlit_autorefresh import st_autorefresh
 
-# Verifica se já passou o tempo necessário
-if time.time() - st.session_state.ultima_atualizacao > INTERVALO_ATUALIZACAO:
-    st.session_state.ultima_atualizacao = time.time()
-    st.experimental_rerun()
+# Autoatualiza a página inteira a cada 30 segundos (30000 milissegundos)
+st_autorefresh(interval=300 * 1000, limit=None, key="visualizacao_tickets")
 
