@@ -1,114 +1,222 @@
+# streamlit_app.py
 import datetime
+import time
 import random
+import smtplib
+from email.message import EmailMessage
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
 import altair as alt
-import numpy as np
 import pandas as pd
 import streamlit as st
 
-# Show app title and description.
-st.set_page_config(page_title="Support tickets", page_icon="🎫")
-st.title("🎫 Support tickets")
+from database import criar_tabela, inserir_ticket, buscar_todos_os_tickets
+
+
+# Função para envio de e-mail
+def enviar_email_ticket(destinatario, nome, setor, problema, prioridade, ticket_id):
+    EMAIL_REMETENTE = st.secrets["email"]["remetente"]
+    SENHA_EMAIL = st.secrets["email"]["senha"]
+
+    msg = EmailMessage()
+    msg["Subject"] = f"Novo Ticket Aberto: {ticket_id}"
+    msg["From"] = EMAIL_REMETENTE
+    msg["To"] = ", ".join(destinatario)
+
+    corpo = f"""
+    Novo ticket foi aberto no sistema de suporte:
+
+    🆔 ID: {ticket_id}
+    🪪 Nome: {nome}
+    🏬 Setor: {setor}
+    📝 Problema: {problema}
+    🚨 Prioridade: {prioridade}
+
+    Verifique o sistema para mais detalhes.
+    """
+    msg.set_content(corpo)
+
+    try:
+        with smtplib.SMTP_SSL("email-ssl.com.br", 465) as smtp:
+            smtp.login(EMAIL_REMETENTE, SENHA_EMAIL)
+            smtp.send_message(msg)
+        st.success("📧 Notificação por e-mail enviada com sucesso!")
+    except Exception as e:
+        st.error(f"Erro ao enviar e-mail: {e}")
+
+
+# Token do Slack via secrets para segurança
+SLACK_TOKEN = st.secrets["slack"]["token"]
+
+
+# API slack
+def enviar_mensagem_slack(ticket_id, nome, setor, problema, prioridade):
+    client = WebClient(token=SLACK_TOKEN)
+
+    try:
+        client.chat_postMessage(
+            channel="#suporte",  # Certifique-se que o bot está no canal
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": ":ticket: *Novo ticket aberto!*",
+                    },
+                },
+                {"type": "divider"},
+                {
+                    "type": "section",
+                    "fields": [
+                        {"type": "mrkdwn", "text": f"*🆔 ID:*\n{ticket_id}"},
+                        {"type": "mrkdwn", "text": f"*🪪 Nome:*\n{nome}"},
+                        {"type": "mrkdwn", "text": f"*🏬 Setor:*\n{setor}"},
+                        {"type": "mrkdwn", "text": f"*🚨 Prioridade:*\n{prioridade}"},
+                    ],
+                },
+                {
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": f"*📝 Problema:*\n{problema}"},
+                },
+                {
+                    "type": "actions",
+                    "elements": [
+                        {
+                            "type": "button",
+                            "text": {"type": "plain_text", "text": "🔎 Ver sistema"},
+                            "url": "http://192.168.152.82:3030",  # Substitua pela URL real do sistema
+                            "style": "primary",
+                        }
+                    ],
+                },
+            ],
+        )
+        st.success("💬 Notificação enviada ao Slack!")
+    except SlackApiError as e:
+        st.error(f"Erro ao enviar para Slack: {e.response['error']}")
+
+
+# Inicializa banco e dados
+criar_tabela()
+
+dados = buscar_todos_os_tickets()
+st.session_state.df = (
+    pd.DataFrame(
+        dados,
+        columns=[
+            "ID",
+            "Nome",
+            "Setor",
+            "Problema",
+            "Status",
+            "Prioridade",
+            "Data de envio",
+        ],
+    )
+    if "df" not in st.session_state
+    else st.session_state.df
+)
+
+# Streamlit config
+st.set_page_config(page_title="Suporte de TI Plenitude", page_icon="🎫")
+st.title("👨‍💻| Suporte de TI Plenitude")
+
 st.write(
     """
-    This app shows how you can build an internal tool in Streamlit. Here, we are 
-    implementing a support ticket workflow. The user can create a ticket, edit 
-    existing tickets, and view some statistics.
-    """
+Este é o nosso canal oficial para abertura de tickets de suporte de TI. Por aqui, você pode registrar suas 
+solicitações de forma prática e organizada, garantindo mais agilidade no atendimento, 
+maior controle das demandas e melhor acompanhamento das soluções.
+Conte conosco — estamos aqui para te ajudar!
+"""
 )
 
-# Create a random Pandas dataframe with existing tickets.
-if "df" not in st.session_state:
+# Formulário para novo ticket
+st.header("Adicionar um 🎫|Ticket")
 
-    # Set seed for reproducibility.
-    np.random.seed(42)
-
-    # Make up some fake issue descriptions.
-    issue_descriptions = [
-        "Network connectivity issues in the office",
-        "Software application crashing on startup",
-        "Printer not responding to print commands",
-        "Email server downtime",
-        "Data backup failure",
-        "Login authentication problems",
-        "Website performance degradation",
-        "Security vulnerability identified",
-        "Hardware malfunction in the server room",
-        "Employee unable to access shared files",
-        "Database connection failure",
-        "Mobile application not syncing data",
-        "VoIP phone system issues",
-        "VPN connection problems for remote employees",
-        "System updates causing compatibility issues",
-        "File server running out of storage space",
-        "Intrusion detection system alerts",
-        "Inventory management system errors",
-        "Customer data not loading in CRM",
-        "Collaboration tool not sending notifications",
-    ]
-
-    # Generate the dataframe with 100 rows/tickets.
-    data = {
-        "ID": [f"TICKET-{i}" for i in range(1100, 1000, -1)],
-        "Issue": np.random.choice(issue_descriptions, size=100),
-        "Status": np.random.choice(["Open", "In Progress", "Closed"], size=100),
-        "Priority": np.random.choice(["High", "Medium", "Low"], size=100),
-        "Date Submitted": [
-            datetime.date(2023, 6, 1) + datetime.timedelta(days=random.randint(0, 182))
-            for _ in range(100)
-        ],
-    }
-    df = pd.DataFrame(data)
-
-    # Save the dataframe in session state (a dictionary-like object that persists across
-    # page runs). This ensures our data is persisted when the app updates.
-    st.session_state.df = df
-
-
-# Show a section to add a new ticket.
-st.header("Add a ticket")
-
-# We're adding tickets via an `st.form` and some input widgets. If widgets are used
-# in a form, the app will only rerun once the submit button is pressed.
 with st.form("add_ticket_form"):
-    issue = st.text_area("Describe the issue")
-    priority = st.selectbox("Priority", ["High", "Medium", "Low"])
-    submitted = st.form_submit_button("Submit")
+    Nome = st.text_area("Nome")
+    Setor = st.selectbox(
+        "Setor",
+        [
+            "Produção",
+            "Comercial",
+            "Marketplace",
+            "RH",
+            "Administrativo",
+            "Marketing",
+            "SAC",
+        ],
+    )
+    Problema = st.text_area("Descreva o seu problema")
+    Prioridade = st.selectbox("Prioridade", ["Alta", "Média", "Baixa"])
+    submitted = st.form_submit_button("Enviar")
 
 if submitted:
-    # Make a dataframe for the new ticket and append it to the dataframe in session
-    # state.
-    recent_ticket_number = int(max(st.session_state.df.ID).split("-")[1])
-    today = datetime.datetime.now().strftime("%m-%d-%Y")
-    df_new = pd.DataFrame(
-        [
-            {
-                "ID": f"TICKET-{recent_ticket_number+1}",
-                "Issue": issue,
-                "Status": "Open",
-                "Priority": priority,
-                "Date Submitted": today,
-            }
-        ]
-    )
+    if not Nome.strip() or not Problema.strip():
+        st.warning("Por favor, preencha todos os campos obrigatórios.")
+    else:
+        hoje = datetime.datetime.now()
+        ticket_id = f"TICKET-{hoje.strftime('%Y%m%d%H%M%S')}-{random.randint(100,999)}"
 
-    # Show a little success message.
-    st.write("Ticket submitted! Here are the ticket details:")
-    st.dataframe(df_new, use_container_width=True, hide_index=True)
-    st.session_state.df = pd.concat([df_new, st.session_state.df], axis=0)
+        inserir_ticket(
+            ticket_id, Nome, Setor, Problema, "Aberto", Prioridade, hoje.date()
+        )
+        st.success("✅ Ticket Enviado com Sucesso!")
 
-# Show section to view and edit existing tickets in a table.
-st.header("Existing tickets")
+        dados_atualizados = buscar_todos_os_tickets()
+        st.session_state.df = pd.DataFrame(
+            dados_atualizados,
+            columns=[
+                "ID",
+                "Nome",
+                "Setor",
+                "Problema",
+                "Status",
+                "Prioridade",
+                "Data de envio",
+            ],
+        )
+
+        novo_ticket = pd.DataFrame(
+            [
+                {
+                    "ID": ticket_id,
+                    "Nome": Nome,
+                    "Setor": Setor,
+                    "Problema": Problema,
+                    "Status": "Aberto",
+                    "Prioridade": Prioridade,
+                    "Data de envio": hoje.date(),
+                }
+            ]
+        )
+        st.dataframe(novo_ticket, use_container_width=True, hide_index=True)
+
+        enviar_email_ticket(
+            destinatario=[
+                "joao.victor@plenitudedistribuidora.com.br",
+            ],
+            nome=Nome,
+            setor=Setor,
+            problema=Problema,
+            prioridade=Prioridade,
+            ticket_id=ticket_id,
+        )
+
+        enviar_mensagem_slack(
+            ticket_id=ticket_id,
+            nome=Nome,
+            setor=Setor,
+            problema=Problema,
+            prioridade=Prioridade,
+        )
+
+# Exibição dos tickets existentes
+st.header("Tickets Existentes")
+st.caption("🔄 A visualização será atualizada automaticamente a cada 5 minutos.")
 st.write(f"Number of tickets: `{len(st.session_state.df)}`")
 
-st.info(
-    "You can edit the tickets by double clicking on a cell. Note how the plots below "
-    "update automatically! You can also sort the table by clicking on the column headers.",
-    icon="✍️",
-)
-
-# Show the tickets dataframe with `st.data_editor`. This lets the user edit the table
-# cells. The edited data is returned as a new dataframe.
 edited_df = st.data_editor(
     st.session_state.df,
     use_container_width=True,
@@ -117,56 +225,56 @@ edited_df = st.data_editor(
         "Status": st.column_config.SelectboxColumn(
             "Status",
             help="Ticket status",
-            options=["Open", "In Progress", "Closed"],
+            options=["Aberto", "Em Progresso", "Fechado"],
             required=True,
         ),
-        "Priority": st.column_config.SelectboxColumn(
-            "Priority",
-            help="Priority",
-            options=["High", "Medium", "Low"],
+        "Prioridade": st.column_config.SelectboxColumn(
+            "Prioridade",
+            help="Prioridade",
+            options=["Alta", "Média", "Baixa"],
             required=True,
         ),
     },
-    # Disable editing the ID and Date Submitted columns.
-    disabled=["ID", "Date Submitted"],
+    disabled=["ID", "Setor", "Data de envio", "Nome"],
 )
 
-# Show some metrics and charts about the ticket.
-st.header("Statistics")
+# Gráficos
+st.header("Estatísticas")
 
-# Show metrics side by side using `st.columns` and `st.metric`.
 col1, col2, col3 = st.columns(3)
-num_open_tickets = len(st.session_state.df[st.session_state.df.Status == "Open"])
-col1.metric(label="Number of open tickets", value=num_open_tickets, delta=10)
-col2.metric(label="First response time (hours)", value=5.2, delta=-1.5)
-col3.metric(label="Average resolution time (hours)", value=16, delta=2)
+num_open_tickets = len(st.session_state.df[st.session_state.df.Status == "Aberto"])
+col1.metric(label="Número de tickets abertos", value=num_open_tickets)
+col2.metric(label="Primeiro tempo de resposta (horas)", value=5.2)
+col3.metric(label="Tempo médio de resolução (horas)", value=16)
 
-# Show two Altair charts using `st.altair_chart`.
-st.write("")
-st.write("##### Ticket status per month")
+st.write("##### Status do ticket por mês")
 status_plot = (
-    alt.Chart(edited_df)
+    alt.Chart(st.session_state.df)
     .mark_bar()
     .encode(
-        x="month(Date Submitted):O",
+        x="month(Data de envio):O",
         y="count():Q",
         xOffset="Status:N",
         color="Status:N",
     )
-    .configure_legend(
-        orient="bottom", titleFontSize=14, labelFontSize=14, titlePadding=5
-    )
+    .configure_axis(labelFontSize=12, titleFontSize=14)
+    .configure_legend(orient="bottom", titleFontSize=13, labelFontSize=12)
 )
-st.altair_chart(status_plot, use_container_width=True, theme="streamlit")
+st.altair_chart(status_plot, use_container_width=True)
 
-st.write("##### Current ticket priorities")
+st.write("##### Prioridades atuais dos tickets")
 priority_plot = (
-    alt.Chart(edited_df)
+    alt.Chart(st.session_state.df)
     .mark_arc()
-    .encode(theta="count():Q", color="Priority:N")
+    .encode(theta="count():Q", color="Prioridade:N")
     .properties(height=300)
-    .configure_legend(
-        orient="bottom", titleFontSize=14, labelFontSize=14, titlePadding=5
-    )
 )
-st.altair_chart(priority_plot, use_container_width=True, theme="streamlit")
+st.altair_chart(priority_plot, use_container_width=True)
+
+
+#função de carregar página
+from streamlit_autorefresh import st_autorefresh
+
+# Autoatualiza a página inteira a cada 30 segundos (30000 milissegundos)
+st_autorefresh(interval=300 * 1000, limit=None, key="visualizacao_tickets")
+
